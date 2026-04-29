@@ -112,7 +112,7 @@ document.getElementById("clearOriginFindings").addEventListener("click", functio
             var tab = tabs[0];
             var origin = (new URL(tab.url)).origin;
             var leakedKeys = result.leakedKeys || {};
-            leakedKeys[origin] = [];
+            leakedKeys[origin] = {};
             chrome.storage.sync.set({"leakedKeys": leakedKeys});
             chrome.action.setBadgeText({text: ''});
             document.getElementById("findingList").innerHTML = "";
