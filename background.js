@@ -229,6 +229,14 @@ var checkForGitDir = function(data, url){
     }
 
 }
+
+var fetchText = function(url, callback){
+    fetch(url, {"credentials": 'include'})
+        .then(response => response.text())
+        .then(callback)
+        .catch(error => console.debug("Trufflehog skipped fetch", url, error));
+}
+
 var js_url;
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
@@ -262,9 +270,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                             let parentOrigin = request.parentOrigin;
                             checkIfOriginDenied(js_url, function(skip){
                                 if (!skip){
-                                    fetch(js_url, {"credentials": 'include'})
-                                        .then(response => response.text())
-                                        .then(data => checkData(data, js_url, regexes, undefined, parentUrl, parentOrigin));
+                                    fetchText(js_url, data => checkData(data, js_url, regexes, undefined, parentUrl, parentOrigin));
                                 }
 
                             })
@@ -277,9 +283,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                             })
                         }else if(request.envFile){
                             if(checkEnv['checkEnv']){
-                                fetch(request.envFile, {"credentials": 'include'})
-                                    .then(response => response.text())
-                                    .then(data => checkData(data, ".env file at " + request.envFile, regexes, undefined, request.parentUrl, request.parentOrigin));
+                                fetchText(request.envFile, data => checkData(data, ".env file at " + request.envFile, regexes, undefined, request.parentUrl, request.parentOrigin));
                             }
                         }else if(request.openTabs){
                             for (tab of request.openTabs){
@@ -288,9 +292,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                             }
                         }else if(request.gitDir){
                             if(checkGit['checkGit']){
-                            fetch(request.gitDir, {"credentials": 'include'})
-                                    .then(response => response.text())
-                                    .then(data => checkForGitDir(data, request.gitDir));
+                            fetchText(request.gitDir, data => checkForGitDir(data, request.gitDir));
                             }
 
                         }
@@ -305,4 +307,3 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     return true;
 });
-
