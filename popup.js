@@ -64,7 +64,7 @@ for (i = 0; i < acc.length; i++) {
         var tab = tabs[0];
 
         var origin = (new URL(tab.url)).origin;
-        chrome.storage.sync.get(["leakedKeys"], function(result) {
+        chrome.storage.local.get(["leakedKeys"], function(result) {
             var leakedKeys = result.leakedKeys || {};
             var keys = leakedKeys[origin];
             let keyInfo = "";
@@ -87,7 +87,7 @@ for (i = 0; i < acc.length; i++) {
 }
 
 var downloadCSV = function(){
-    chrome.storage.sync.get(["leakedKeys"], function(result) {
+    chrome.storage.local.get(["leakedKeys"], function(result) {
         let csvRows = [];
         var leakedKeys = result.leakedKeys || {};
         for (let origin in leakedKeys){
@@ -107,25 +107,25 @@ document.getElementById("downloadAllFindings").addEventListener("click", functio
     downloadCSV();
 })
 document.getElementById("clearOriginFindings").addEventListener("click", function() {
-    chrome.storage.sync.get(["leakedKeys"], function(result) {
+    chrome.storage.local.get(["leakedKeys"], function(result) {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
             var tab = tabs[0];
             var origin = (new URL(tab.url)).origin;
             var leakedKeys = result.leakedKeys || {};
             leakedKeys[origin] = {};
-            chrome.storage.sync.set({"leakedKeys": leakedKeys});
+            chrome.storage.local.set({"leakedKeys": leakedKeys});
             chrome.action.setBadgeText({text: ''});
             document.getElementById("findingList").innerHTML = "";
         })
     })
 })
 document.getElementById("clearAllFindings").addEventListener("click", function() {
-    chrome.storage.sync.get(["leakedKeys"], function(result) {
+    chrome.storage.local.get(["leakedKeys"], function(result) {
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
             var tab = tabs[0];
             var origin = (new URL(tab.url)).origin;
             result.leakedKeys = {};
-            chrome.storage.sync.set({"leakedKeys": result.leakedKeys});
+            chrome.storage.local.set({"leakedKeys": result.leakedKeys});
             chrome.action.setBadgeText({text: ''});
             document.getElementById("findingList").innerHTML = "";
         })
