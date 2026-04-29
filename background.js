@@ -233,8 +233,7 @@ var checkForGitDir = function(data, url){
 var fetchText = function(url, callback){
     fetch(url, {"credentials": 'include'})
         .then(response => response.text())
-        .then(callback)
-        .catch(error => console.debug("Trufflehog skipped fetch", url, error));
+        .then(callback, error => console.debug("Trufflehog skipped fetch", url, error));
 }
 
 var js_url;
