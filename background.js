@@ -1,31 +1,14 @@
 // this is the background code...
 
-// listen for our browerAction to be clicked
-// for the current tab, inject the "inject.js" file & execute it
-
-
-var currentTab;
 var version = "1.0";
 
-chrome.tabs.query( //get current Tab
-    {
-        currentWindow: true,
-        active: true
-    },
-    function(tabArray) {
-        currentTab = tabArray[0];
-        chrome.tabs.executeScript(currentTab.ib, {
-            file: 'inject.js'
-        });
-    }
-)
-
-chrome.storage.sync.get(['ranOnce'], function(ranOnce) {
-    if (! ranOnce.ranOnce){
-        chrome.storage.sync.set({"ranOnce": true});
-        chrome.storage.sync.set({"originDenyList": ["https://www.google.com"]});
-    }
-
+chrome.runtime.onInstalled.addListener(function() {
+    chrome.storage.sync.get(['ranOnce'], function(ranOnce) {
+        if (! ranOnce.ranOnce){
+            chrome.storage.sync.set({"ranOnce": true});
+            chrome.storage.sync.set({"originDenyList": ["https://www.google.com"]});
+        }
+    })
 })
 
 
@@ -149,29 +132,38 @@ var updateTabAndAlert = function(finding){
     chrome.storage.sync.get(["alerts"], function(result) {
         console.log(result.alerts)
         if (result.alerts == undefined || result.alerts){
-            if (fromEncoded){
-                alert(key + ": " + match + " found in " + src + " decoded from " + fromEncoded.substring(0,9) + "...");
-            }else{
-                alert(key + ": " + match + " found in " + src);
-            }
+            var message = fromEncoded
+                ? key + ": " + match + " found in " + src + " decoded from " + fromEncoded.substring(0,9) + "..."
+                : key + ": " + match + " found in " + src;
+            chrome.notifications.create({
+                type: "basic",
+                iconUrl: "icon128.png",
+                title: "Trufflehog",
+                message: message.substring(0, 400)
+            });
         }
     })
     updateTab();
 }
 
 var updateTab = function(){
-     chrome.tabs.getSelected(null, function(tab) {
-        var tabId = tab.id;
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        var tab = tabs && tabs[0];
+        if (!tab || !tab.url || !tab.url.startsWith("http")){
+            chrome.action.setBadgeText({text: ""});
+            return;
+        }
         var tabUrl = tab.url;
         var origin = (new URL(tabUrl)).origin
         chrome.storage.sync.get(["leakedKeys"], function(result) {
-            if (Array.isArray(result.leakedKeys[origin])){
-                var originKeys = result.leakedKeys[origin].length.toString();
+            var leakedKeys = result.leakedKeys || {};
+            if (Array.isArray(leakedKeys[origin])){
+                var originKeys = leakedKeys[origin].length.toString();
             }else{
                 var originKeys = "";
             }
-            chrome.browserAction.setBadgeText({text: originKeys});
-            chrome.browserAction.setBadgeBackgroundColor({color: '#ff0000'});
+            chrome.action.setBadgeText({text: originKeys});
+            chrome.action.setBadgeBackgroundColor({color: '#ff0000'});
         })
     });
 }
@@ -222,7 +214,7 @@ var getDecodedb64 = function(inputString){
 var checkIfOriginDenied = function(check_url, cb){
     let skip = false;
     chrome.storage.sync.get(["originDenyList"], function(result) {
-        let originDenyList = result.originDenyList;
+        let originDenyList = result.originDenyList || [];
         for (origin of originDenyList){
             if(check_url.startsWith(origin)){
                 skip = true;
@@ -233,12 +225,12 @@ var checkIfOriginDenied = function(check_url, cb){
 }
 var checkForGitDir = function(data, url){
     if(data.startsWith("[core]")){
-        alert(".git dir found in " + url + " feature to check this for secrets not supported");
+        chrome.notifications.create({type: "basic", iconUrl: "icon128.png", title: "Trufflehog", message: ".git dir found in " + url + " feature to check this for secrets not supported"});
     }
 
 }
 var js_url;
-chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     chrome.storage.sync.get(['generics'], function(useGenerics) {
         chrome.storage.sync.get(['specifics'], function(useSpecifics) {
@@ -291,7 +283,7 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
                             }
                         }else if(request.openTabs){
                             for (tab of request.openTabs){
-                                window.open(tab);
+                                chrome.tabs.create({url: tab});
                                 console.log(tab)
                             }
                         }else if(request.gitDir){
@@ -311,5 +303,6 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
 
 
 
+    return true;
 });
 

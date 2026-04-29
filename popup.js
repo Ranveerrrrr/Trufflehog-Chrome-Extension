@@ -57,14 +57,16 @@ for (i = 0; i < acc.length; i++) {
       panel.style.display = "block";
       var el = document.getElementById("denyList");
       chrome.storage.sync.get(["originDenyList"], function(result) {
-        el.value = result.originDenyList.join(",");
+        el.value = (result.originDenyList || []).join(",");
         el.focus();
       })
-      chrome.tabs.getSelected(null,function(tab) {
+      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        var tab = tabs[0];
 
         var origin = (new URL(tab.url)).origin;
         chrome.storage.sync.get(["leakedKeys"], function(result) {
-            var keys = result.leakedKeys[origin];
+            var leakedKeys = result.leakedKeys || {};
+            var keys = leakedKeys[origin];
             let keyInfo = "";
             let htmlList = "";
             if(!keys){keys = []}
@@ -87,8 +89,9 @@ for (i = 0; i < acc.length; i++) {
 var downloadCSV = function(){
     chrome.storage.sync.get(["leakedKeys"], function(result) {
         let csvRows = [];
-        for (let origin in result.leakedKeys){
-            var findings = result.leakedKeys[origin];
+        var leakedKeys = result.leakedKeys || {};
+        for (let origin in leakedKeys){
+            var findings = leakedKeys[origin];
             for (finding of findings){
                 csvRows.push([origin, finding["src"], finding["parentUrl"], finding["key"], finding["match"], finding["encoded"]])
             }
@@ -105,22 +108,25 @@ document.getElementById("downloadAllFindings").addEventListener("click", functio
 })
 document.getElementById("clearOriginFindings").addEventListener("click", function() {
     chrome.storage.sync.get(["leakedKeys"], function(result) {
-        chrome.tabs.getSelected(null,function(tab) {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            var tab = tabs[0];
             var origin = (new URL(tab.url)).origin;
-            result.leakedKeys[origin] = {};
-            chrome.storage.sync.set({"leakedKeys": result.leakedKeys});
-            chrome.browserAction.setBadgeText({text: ''});
+            var leakedKeys = result.leakedKeys || {};
+            leakedKeys[origin] = [];
+            chrome.storage.sync.set({"leakedKeys": leakedKeys});
+            chrome.action.setBadgeText({text: ''});
             document.getElementById("findingList").innerHTML = "";
         })
     })
 })
 document.getElementById("clearAllFindings").addEventListener("click", function() {
     chrome.storage.sync.get(["leakedKeys"], function(result) {
-        chrome.tabs.getSelected(null,function(tab) {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            var tab = tabs[0];
             var origin = (new URL(tab.url)).origin;
             result.leakedKeys = {};
             chrome.storage.sync.set({"leakedKeys": result.leakedKeys});
-            chrome.browserAction.setBadgeText({text: ''});
+            chrome.action.setBadgeText({text: ''});
             document.getElementById("findingList").innerHTML = "";
         })
     })
